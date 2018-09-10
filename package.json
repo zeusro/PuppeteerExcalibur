@@ -1,0 +1,19 @@
+{
+  "name": "puppetee-demo",
+  "version": "1.0.0",
+  "description": "Puppeteer,带你装逼带你飞",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "mocha"
+  },
+  "keywords": [
+    "Puppeteer"
+  ],
+  "author": "Zeusro",
+  "license": "ISC",
+  "dependencies": {
+    "mocha": "^5.2.0",
+    "puppeteer": "^1.7.0"
+  }
+}
