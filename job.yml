@@ -1,0 +1,31 @@
+
+resources:
+- name: yinwang-blog
+  type: page
+  source:
+    host: http://www.yinwang.org/
+    url: http://www.yinwang.org/
+
+- name: yinwang-page
+  type: page
+  element: 
+    - title:
+        - selector: .inner,h2
+          type: element        
+    - content:
+        - selector: .inner,p
+          type: array   
+   
+jobs:
+- name: yin-wang
+  plan:
+  - get: yinwang-blog
+  - task:
+    repeat: e6h
+    type: save
+    output: md      
+      - task:
+        type: for
+        - selector: .title,.list-group
+            srategy: click
+            
