@@ -9,8 +9,6 @@
 
 'use strict';
 
-
-
 // Makes the script crash on unhandled rejections instead of silently
 // ignoring them. In the future, promise rejections that are not handled will
 // terminate the Node.js process with a non-zero exit code.
@@ -20,13 +18,14 @@ process.on('unhandledRejection', err => {
 
 const args = process.argv.slice(2)
 
-
 const puppeteer = require('puppeteer')
 const host = 'http://www.yinwang.org'
 //获取任务
 puppeteer.launch().then(async browser => {
   const page = await browser.newPage()
-  await page.goto(host)
+  await page.goto(host, {
+    waitUntil: 'load'
+  })
   let bodyHTML = await page.evaluate(() => document.body.innerHTML)
   const cheerio = require('cheerio')
   var $ = cheerio.load(bodyHTML)
@@ -61,53 +60,86 @@ puppeteer.launch().then(async browser => {
       });
       fs.rmdirSync(path);
     }
-  };
+  }
 
-  deleteFolderRecursive(outputDir)
+  // deleteFolderRecursive(outputDir)
+  // fs.mkdir(outputDir, function (err) {
+  //   if (err) {
+  //     console.log(err);
+  //   }
+  // })
 
-
-  for (let index = 0; index < 1; index++) {
+  for (let index = 0; index < articles.length; index++) {
     const element = articles[index];
-    console.log("开始爬取" + element.article + ":" + element.url)
+    const fileName = outputDir + "/" + element.article + ".md"    
+    if (fs.existsSync(fileName)) {
+      console.log("文件已存在,跳过")
+      continue
+    }
+    console.log("开始爬取 " + element.article + ":" + element.url)
     await page.goto(element.url)
     let articleHTML = await page.evaluate(() => document.body.innerHTML)
     //下载所有图片
     // var $ = cheerio.load(articleHTML)
     //phase 段落
-    const fileName = outputDir + "/" + element.article + ".md"
-
+    
     const newLine = "\r\n"
-    const endTagRegex = /<\/(p|h1|h2|h3)>/g
-    const h1Regex = /<h1(\s\S)*?>/g
-    const h2Regex = /<h2(\s\S)*?>/g
-    const h3Regex = /<h3(\s\S)*?>/g
-    const pRegex = /<p(\s\S)*?>/g
-    const srciptRegex = /^<script(\s\S)*?\/script(\s\S)*?>$/g
 
+    //可以用markdown替换的
+    const endTagRegex = /<\/(p|h1|h2|h3)>/g
+    const h1Regex = /<h1[\s\S]*?>/g
+    const h2Regex = /<h2[\s\S]*?>/g
+    const h3Regex = /<h3[\s\S]*?>/g
+    const pStartRegex = /<p[\s\S]*?>/g
+    const pEndRegex = /<\/p>/g
+    const strongStartRegex = /<strong[\s\S]*?>/g
+    const strongEndRegex = /<\/strong>/g
+    const preStartRegex = /<pre[\s\S]*?>/g
+    const preEndRegex = /<\/pre>/g
     articleHTML = articleHTML.replace(endTagRegex, "")
     articleHTML = articleHTML.replace(h1Regex, "# ")
     articleHTML = articleHTML.replace(h2Regex, "## ")
-    articleHTML = articleHTML.replace(h3Regex, "### ")
-    articleHTML = articleHTML.replace(pRegex, "> " + newLine + "> ")
+    articleHTML = articleHTML.replace(h3Regex, "### ")    
+    articleHTML = articleHTML.replace(preStartRegex, "```" + newLine)
+    articleHTML = articleHTML.replace(preEndRegex, "```" + newLine)
+    articleHTML = articleHTML.replace(pStartRegex, "> " + newLine + "> ")
+    articleHTML = articleHTML.replace(pEndRegex, "")
+    articleHTML = articleHTML.replace(strongStartRegex, "**")
+    articleHTML = articleHTML.replace(strongEndRegex, "**")
+
+    //暂时不替换的
+    const srciptRegex = /<script[\s\S\r\n]*?\/script[\s\S]*?>/g
+    const commentRegex = /<!--[\s\S\r\n]*?-->/g
+    const codeStartRegex = /<code[\s\S]*?>/g
+    const codeEndRegex = /<\/code>/g
+    const divStartRegex = /<div[\s\S]*?>/g
+    const divEndRegex = /<\/div>/g
+    const spanStartRegex = /<span[\s\S]*?>/g
+    const spanEndRegex = /<\/span>/g
     articleHTML = articleHTML.replace(srciptRegex, "")
+    articleHTML = articleHTML.replace(commentRegex, "")
+    articleHTML = articleHTML.replace(codeStartRegex, "")
+    articleHTML = articleHTML.replace(codeEndRegex, "")
+    articleHTML = articleHTML.replace(divStartRegex, "")
+    articleHTML = articleHTML.replace(divEndRegex, "")
+    articleHTML = articleHTML.replace(spanStartRegex, "")
+    articleHTML = articleHTML.replace(spanEndRegex, "")
+
+    //其他字符
+    articleHTML = articleHTML.replace('&gt;', ">")
+
     const markdownContent = articleHTML
-    fs.mkdir(outputDir, function (err) {
-      if (err) {
-        console.log(err);
-      }
-    })
+
     fs.appendFile(fileName, markdownContent, (err) => {
-      if (err) throw err
-      console.log('The "data to append" was appended to file!')
+      if (err) {
+        throw err
+      }
+      // console.log(fileName + " created.")
     })
 
   }
   await browser.close();
 });
-
-function replace(html) {
-
-}
 
 
 // const scriptIndex = args.findIndex(
